@@ -73,7 +73,7 @@
 								<protocVersion>${protobuf.version}</protocVersion>
 								
 								<inputDirectories>
-									<include>src/main/proto</include>
+									<include>src/main/resources</include>
 								</inputDirectories>
 							</configuration>
 						</execution>
