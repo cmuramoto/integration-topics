@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "nats.h": "c",
+        "nats.util.h": "c",
+        "test_zmq.pb-c.h": "c",
+        "protobuf-c.h": "c"
+    }
+}

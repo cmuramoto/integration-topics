@@ -1,0 +1,13 @@
+#java
+.classpath
+.project
+.settings
+target
+bin
+
+#c
+*.a
+*.o
+*.so
+*.out
+*.bin

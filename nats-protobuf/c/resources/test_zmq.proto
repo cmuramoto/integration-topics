@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package nats_model;
+
+option java_package = "nats.model";
+option java_outer_classname = "ZmqTestProtos";
+
+message MsgSyncPlataoStvd_t {
+   uint32 tamanho = 1; /* tamanho da mensagem */
+   uint32 numExe = 2; /* Número do exercício */
+   uint32 comando = 3; /* Comando enviado pelo PLATAO */
+   uint64 horaMaquina = 4; /* Horário da máquina */
+   uint32 horaSistema = 5; /* Horário do exercício */
+   uint32 velocidade = 6; /* Velocidade de execução do exercício */
+   uint32 msgId = 7; /* Contador incremental de 0 a 255 */   
+}
+
+message MsgSyncPlataoStvdResp_t {
+   uint32 result = 1;
+   repeated string failedStvds = 2;
+   uint32 command = 3; /* Comando enviado pelo PLATAO */
+   uint32 ref = 4; /* Contador incremental de 0 a 255 */
+   uint32 reserved = 5;
+}

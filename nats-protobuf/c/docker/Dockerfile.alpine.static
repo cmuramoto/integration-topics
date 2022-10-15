@@ -1,0 +1,29 @@
+FROM cmuramoto/alpine-proto-nats:1.0 as build
+
+COPY include/ /include 
+COPY resources/ /resources
+COPY closures/ /closures
+COPY server.proto.h .
+COPY server.proto.c .
+
+RUN sed -i s/THE_WATERMARK/$(date +"%Y-%m-%dT%H:%M:%S")/g include/defs.h
+RUN cp resources/test_zmq.proto .  && protoc-c --c_out=. test_zmq.proto && cp test_zmq.pb-c.h resources
+RUN gcc -c -Wall -Werror test_zmq.pb-c.c && ar -rc libtest_zmq.pb-c_static.a  test_zmq.pb-c.o
+RUN gcc -g -L/usr/local/lib/ server.proto.c  \
+libtest_zmq.pb-c_static.a \
+/usr/local/lib/libnats_static.a \
+/usr/lib/libprotobuf-c.a \
+-lpthread
+
+#FROM cmuramoto/alpine-base:1.0
+FROM alpine:3.14.2
+
+COPY --from=build a.out server
+
+ENV NATS_SERVERS "localhost:4222"
+ENV SERVER_WORKERS "1"
+ENV LOG_DESERIALIZE "false"
+ENV LOG_SERIALIZE "false"
+ENV LOG_RECEIVE "false"
+
+CMD ./server $NATS_SERVERS
