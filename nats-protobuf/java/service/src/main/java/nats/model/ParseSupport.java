@@ -7,10 +7,6 @@ import nats.model.ZmqTestProtos.MsgSyncPlataoStvd_t;
 
 public class ParseSupport {
 
-	public static MsgSyncPlataoStvd_t parse(Message message) {
-		return parse(message.getData());
-	}
-	
 	public static MsgSyncPlataoStvd_t parse(byte[] chunk) {
 		try {
 			return MsgSyncPlataoStvd_t.parseFrom(chunk);
@@ -18,5 +14,9 @@ public class ParseSupport {
 			throw new RuntimeException(e);
 		}
 	}
-	
+
+	public static MsgSyncPlataoStvd_t parse(Message message) {
+		return parse(message.getData());
+	}
+
 }
