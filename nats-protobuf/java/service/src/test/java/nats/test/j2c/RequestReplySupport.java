@@ -67,7 +67,7 @@ public class RequestReplySupport {
 
 	@SuppressWarnings("resource")
 	public void init(String nats) {
-		var servers = new String[]{ nats };
+		var servers = Arrays.stream(nats.split(",")).map(v -> v.trim()).toArray(String[]::new);
 		var opts = new Options.Builder().servers(servers).build();
 		clients = new RequestReplyClient[Runtime.getRuntime().availableProcessors()];
 		for (var i = 0; i < clients.length; i++) {

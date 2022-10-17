@@ -1,16 +1,23 @@
 version: '3.5'
 
 services:
-  nats:
+  nats-01:
     image: nats
     ports:
       - 4222:4222
       - 6222:6222
       - 8222:8222
+  nats-02:
+    image: nats
+    ports:
+      - 4223:4222
+      - 6223:6222
+      - 8223:8222
   platao-c-server:
     image: cmuramoto/platao-c-server:1.0-static-alpine
     depends_on:
-      - nats
+      - nats-01
+      - nats-02
     environment:
-      NATS_SERVERS: "nats:4222"
+      NATS_SERVERS: "nats-01:4222,nats-02:4222"
       SERVER_WORKERS: "4"
