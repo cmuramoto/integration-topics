@@ -9,11 +9,17 @@ typedef unsigned long thread_id;
 
 typedef struct
 {
+    char **urls;
+    uint32_t length;
+} NatsUrls;
+
+typedef struct
+{
     bool log_receive;
     bool log_deserialize;
     bool log_serialize;
     int workers;
-    char **servers;
+    NatsUrls nats_urls;
 } ServerConfig;
 
 typedef struct
@@ -23,16 +29,17 @@ typedef struct
     thread_id owner;
 } GrowableArray;
 
-typedef struct
-{
-    char **urls;
-    unsigned int server_count;
-} NatsUrls;
-
 ServerConfig sc;
 ServerConfig *server_config = &sc;
 const char *WATERMARK = "THE_WATERMARK";
-char *servers[1];
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+const char **as_const(char **c)
+{
+    return c;
+}
+#pragma GCC diagnostic pop
 
 bool should_trim(char c)
 {
@@ -85,9 +92,8 @@ const char *to_string(bool b)
     return b ? "true" : "false";
 }
 
-NatsUrls resolve_nats_urls()
+void resolve_nats_urls(char *ns)
 {
-    char *ns = get_env_str("NATS_SERVERS", "localhost:4222");
     int len = strlen(ns) + 1;
     char servers[len];
     memccpy(servers, ns, 0, len);
@@ -99,8 +105,6 @@ NatsUrls resolve_nats_urls()
 
     while (ptr != NULL)
     {
-        printf("'%s'\n", ptr);
-
         char *p = trim(ptr);
 
         char *array = (char *)malloc(strlen(p) + 1);
@@ -108,11 +112,15 @@ NatsUrls resolve_nats_urls()
         urls[tokens++] = array;
 
         ptr = strtok(NULL, ",");
+
+        if (tokens >= 32)
+        {
+            printf("Too many servers");
+            exit(1);
+        }
     }
 
-    void *foo = malloc(16);
-
-    int fs = sizeof(&foo);
+    const size_t address_size = sizeof(void *);
 
     char **rv = (char **)(malloc(tokens * address_size));
 
@@ -121,35 +129,28 @@ NatsUrls resolve_nats_urls()
         rv[i] = urls[i];
     }
 
-    NatsUrls r;
-
-    r.urls = rv;
-    r.server_count = tokens;
-
-    return r;
+    NatsUrls *nats_urls = &(server_config->nats_urls);
+    nats_urls->urls = rv;
+    nats_urls->length = (uint32_t)tokens;
 }
 
 void set_env()
 {
-    memset(servers, 0, sizeof(servers));
-
-    char *server_urls = get_env_str("NATS_SERVERS", "localhost:4222");
-
-    servers[0] = server_urls;
-
     ServerConfig *cfg = server_config;
     cfg->log_deserialize = get_env_bool("LOG_DESERIALIZE");
     cfg->log_receive = get_env_bool("LOG_RECEIVE");
     cfg->log_serialize = get_env_bool("LOG_SERIALIZE");
     cfg->workers = get_env_int("SERVER_WORKERS", 1);
-    cfg->servers = servers;
+    char *urls = get_env_str("NATS_SERVERS", "localhost:4222");
+
+    resolve_nats_urls(urls);
 
     printf("ServerConfig: {log: {receive: %s, serialize: %s, deserialize: %s}, workers: %d, server_urls: %s}. Version Watermark: %s\n",
            to_string(cfg->log_receive),
            to_string(cfg->log_serialize),
            to_string(cfg->log_deserialize),
            cfg->workers,
-           server_urls,
+           urls,
            WATERMARK);
 }
 

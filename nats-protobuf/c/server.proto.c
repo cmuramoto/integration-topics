@@ -11,69 +11,6 @@ bool auto_unsubscribe = false;
 const char *subj = "sub";
 const char *queue_name = "c-workers";
 
-static void onMsg(natsConnection *nc, natsSubscription *sub, natsMsg *msg, void *closure)
-{
-    const char *subject = natsMsg_GetSubject(msg);
-
-    const char *reply = natsMsg_GetReply(msg);
-
-    const char *data = natsMsg_GetData(msg);
-
-    int len = natsMsg_GetDataLength(msg);
-
-    thread_id thread = (thread_id)pthread_self();
-
-    if (server_config->log_receive)
-    {
-        printf("[%lu]Received msg: %s - %d(bytes)\n",
-               thread,
-               subject,
-               len);
-    }
-
-    NatsModel__MsgSyncPlataoStvdT *unpacked = nats_model__msg_sync_platao_stvd_t__unpack(NULL, len, data);
-
-    if (server_config->log_deserialize)
-    {
-        printf("[%lu]Deserializing packet of %d bytes\n", thread, len);
-    }
-
-    char out[1024];
-
-    size_t packed_len = nats_model__msg_sync_platao_stvd_t__pack(unpacked, out);
-
-    if (server_config->log_serialize)
-    {
-        printf("[%lu]Serialized packet to %d bytes\n", thread, (int)packed_len);
-    }
-
-    nats_model__msg_sync_platao_stvd_t__free_unpacked(unpacked, NULL);
-
-    natsMsg *reply_msg;
-
-    natsStatus create_status = natsMsg_Create(&reply_msg, reply, subject, out, packed_len);
-
-    /* We can only destroy the message after using info extracted with natsMsg_GetXXX,
-     * otherwise we might end up with stale memory that was reclaimed somewhere else.
-     */
-    natsMsg_Destroy(msg);
-
-    if (create_status != NATS_OK)
-    {
-        printf("Unable to create reply message!\n");
-        return;
-    }
-
-    natsStatus reply_status = natsConnection_PublishMsg(nc, reply_msg);
-
-    if (reply_status != NATS_OK)
-    {
-        printf("Error replying to %s\n", "");
-    }
-
-    natsMsg_Destroy(reply_msg);
-}
-
 static void onMsgDelegate(natsConnection *nc, natsSubscription *sub, natsMsg *msg, void *closure(natsConnection *, natsSubscription *, natsMsg *))
 {
     closure(nc, sub, msg);
@@ -100,7 +37,7 @@ asyncCb(natsConnection *nc, natsSubscription *sub, natsStatus err, void *closure
     natsSubscription_GetDropped(sub, (int64_t *)&dropped);
 }
 
-void create_subscriber(const char **servers, int num_servers)
+void create_subscriber(const char **servers, uint32_t num_servers)
 {
 
     natsOptions *opts;
@@ -111,7 +48,7 @@ void create_subscriber(const char **servers, int num_servers)
     natsStatus s;
 
     natsStatus st = natsOptions_Create(&opts);
-    natsOptions_SetServers(opts, servers, 1);
+    natsOptions_SetServers(opts, servers, num_servers);
     natsOptions_SetAllowReconnect(opts, true);
     natsOptions_SetSendAsap(opts, true);
     natsOptions_SetTimeout(opts, 15000);
@@ -120,9 +57,9 @@ void create_subscriber(const char **servers, int num_servers)
 
     thread_id thread = (thread_id)pthread_self();
 
-    printf("[Worker#%lu]Listening %ssynchronously for requests on %s::%s\n",
+    printf("[Worker#%lu]Listening %s for requests on %s::%s\n",
            thread,
-           (async ? "a" : ""),
+           (async ? "asynchronously" : "synchronously"),
            queue_name,
            subj);
 
@@ -200,13 +137,14 @@ void create_subscriber(const char **servers, int num_servers)
 
 void *thread_run(void *args)
 {
-    const char **servers = (const char **)args;
-    const int num_servers = sizeof(servers) / sizeof(char);
+    NatsUrls *urls = (NatsUrls *)args;
+    const char **servers = as_const(urls->urls);
+    const uint32_t num_servers = urls->length;
 
     create_subscriber(servers, num_servers);
 }
 
-void create_subscriber_threads(const char **servers, int max_stack)
+void create_subscriber_threads(int max_stack)
 {
     int n_threads = server_config->workers;
 
@@ -225,7 +163,7 @@ void create_subscriber_threads(const char **servers, int max_stack)
         pthread_attr_setstack(&stack_attr, &stacks[i], max_stack);
 
         // create thread using customized stack space
-        pthread_create(&threads[i], &stack_attr, thread_run, servers);
+        pthread_create(&threads[i], &stack_attr, thread_run, &(server_config->nats_urls));
     }
 
     for (int i = 0; i < n_threads; i++)
@@ -238,8 +176,8 @@ void create_subscriber_threads(const char **servers, int max_stack)
 int main(int argc, char **argv)
 {
     set_env();
-    
-    create_subscriber_threads((const char **)server_config->servers, 256 * 1024);
+
+    create_subscriber_threads(256 * 1024);
 
     // To silence reports of memory still in used with valgrind
     nats_Close();
