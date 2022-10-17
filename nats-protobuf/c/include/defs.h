@@ -23,8 +23,41 @@ typedef struct
     thread_id owner;
 } GrowableArray;
 
+typedef struct
+{
+    char **urls;
+    unsigned int server_count;
+} NatsUrls;
+
 ServerConfig sc;
 ServerConfig *server_config = &sc;
+const char *WATERMARK = "THE_WATERMARK";
+char *servers[1];
+
+bool should_trim(char c)
+{
+    return (c == ' ' || c == '\t' || c == '\n');
+}
+
+char *trim(char *s)
+{
+    char *p = s;
+
+    while (should_trim(*p))
+    {
+        p++;
+    }
+
+    char *q = s + (strlen(s) - 1);
+
+    while (should_trim(*q))
+    {
+        *q = '\0';
+        q--;
+    }
+
+    return p;
+}
 
 bool get_env_bool(const char *key)
 {
@@ -40,7 +73,8 @@ int get_env_int(const char *key, int def)
     return val != NULL ? atoi(val) : def;
 }
 
-char* get_env_str(const char* key, char* def){
+char *get_env_str(const char *key, char *def)
+{
     char *val = getenv(key);
 
     return val != NULL ? val : def;
@@ -51,14 +85,55 @@ const char *to_string(bool b)
     return b ? "true" : "false";
 }
 
-const char *WATERMARK = "THE_WATERMARK";
-char *servers[1];
+NatsUrls resolve_nats_urls()
+{
+    char *ns = get_env_str("NATS_SERVERS", "localhost:4222");
+    int len = strlen(ns) + 1;
+    char servers[len];
+    memccpy(servers, ns, 0, len);
+
+    int tokens = 0;
+    char *ptr = strtok(servers, ",");
+
+    char *urls[32];
+
+    while (ptr != NULL)
+    {
+        printf("'%s'\n", ptr);
+
+        char *p = trim(ptr);
+
+        char *array = (char *)malloc(strlen(p) + 1);
+        memccpy(array, p, 0, strlen(p) + 1);
+        urls[tokens++] = array;
+
+        ptr = strtok(NULL, ",");
+    }
+
+    void *foo = malloc(16);
+
+    int fs = sizeof(&foo);
+
+    char **rv = (char **)(malloc(tokens * address_size));
+
+    for (int i = 0; i < tokens; i++)
+    {
+        rv[i] = urls[i];
+    }
+
+    NatsUrls r;
+
+    r.urls = rv;
+    r.server_count = tokens;
+
+    return r;
+}
 
 void set_env()
 {
     memset(servers, 0, sizeof(servers));
 
-    char* server_urls =  get_env_str("NATS_SERVERS","localhost:4222");
+    char *server_urls = get_env_str("NATS_SERVERS", "localhost:4222");
 
     servers[0] = server_urls;
 
