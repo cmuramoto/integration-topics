@@ -4,5 +4,9 @@
         "nats.util.h": "c",
         "test_zmq.pb-c.h": "c",
         "protobuf-c.h": "c"
-    }
+    },
+    "cSpell.words": [
+        "Nats",
+        "Wincompatible"
+    ]
 }
