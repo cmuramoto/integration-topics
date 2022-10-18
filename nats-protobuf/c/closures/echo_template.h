@@ -1,13 +1,9 @@
-#ifndef INCLUDE_TEST_ZMQ_PB
-#define INCLUDE_TEST_ZMQ_PB 1
+#pragma once
+
 #include "../resources/test_zmq.pb-c.h"
-#endif
-
-#ifndef INCLUDE_DEFS
-#define INCLUDE_DEFS 1
 #include "../include/defs.h"
-#endif
 
+// ThreadLocal support is broken in alpine image
 #define USE_GROWABLE_ARRAY 0
 
 void echo_template(natsConnection *nc, natsSubscription *sub, natsMsg *msg, void *unpack(const uint8_t *, int), size_t pack(void *, uint8_t *))

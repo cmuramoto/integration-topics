@@ -1,7 +1,6 @@
-#ifndef INCLUDE_TEST_ZMQ_PB
-#define INCLUDE_TEST_ZMQ_PB 1
+#pragma once
+
 #include "../resources/test_zmq.pb-c.h"
-#endif
 
 void *unpack_zmq(const uint8_t *data, int len)
 {

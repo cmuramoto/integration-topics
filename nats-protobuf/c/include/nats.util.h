@@ -1,8 +1,6 @@
-#ifndef INCLUDE_DEFS
-#define INCLUDE_DEFS 1
-#include "./defs.h"
-#endif
+#pragma once
 
+#include "./defs.h"
 #define STATS_IN 0x1
 #define STATS_OUT 0x2
 #define STATS_COUNT 0x4

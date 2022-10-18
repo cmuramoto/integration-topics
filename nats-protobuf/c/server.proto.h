@@ -1,13 +1,7 @@
-#ifndef INCLUDE_NATS_UTIL
-#define INCLUDE_NATS_UTIL 1
-#include "include/nats.util.h"
-#endif
+#pragma once
 
-#ifndef INCLUDE_TEST_ZMQ_PB
-#define INCLUDE_TEST_ZMQ_PB 1
 #include "resources/test_zmq.pb-c.h"
-#endif
-
+#include "include/nats.util.h"
 #include "closures/echo_template.h"
 #include "closures/echo_zmq.h"
 
